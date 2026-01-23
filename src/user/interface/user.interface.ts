@@ -11,6 +11,10 @@ export interface UserRequestBodyResponse {
   updatedAt?: Date;
 }
 
+export interface ListUserRequestBodyResponse {
+  userDetails: UserRequestBodyResponse[];
+}
+
 export interface UserRequestParamsResponse {
   id: string;
 }

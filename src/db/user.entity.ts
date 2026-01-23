@@ -1,5 +1,12 @@
 import { Column, Entity } from 'typeorm';
 import { TemplateEntity } from './template.entity';
+
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+  DELETED = 'deleted',
+}
 @Entity('user')
 export class UserEntity extends TemplateEntity {
   // Additional user-specific columns can be added here
@@ -23,4 +30,7 @@ export class UserEntity extends TemplateEntity {
 
   @Column({ type: 'varchar' })
   phoneNumber: string;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
 }
