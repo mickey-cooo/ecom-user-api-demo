@@ -36,3 +36,10 @@ export class UserDataBodyRequest {
   @ApiProperty()
   createdBy: string;
 }
+
+export class ParamsUserRequest {
+  @ApiProperty()
+  @IsDefined()
+  @IsString()
+  id: string;
+}
