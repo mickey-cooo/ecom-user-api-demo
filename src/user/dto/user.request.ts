@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsEmail, IsString, Max, Min } from 'class-validator';
 
-export class UserDataBodyRequest {
+export class UserDataBodyRequestDTO {
   @ApiProperty()
   @IsDefined()
   @IsString()
@@ -37,9 +37,15 @@ export class UserDataBodyRequest {
   createdBy: string;
 }
 
-export class ParamsUserRequest {
+export class ParamsUserRequestDTO {
   @ApiProperty()
   @IsDefined()
   @IsString()
   id: string;
+}
+
+export class ListUserRequestBodyDTO {
+  @ApiProperty()
+  @IsDefined()
+  ids: string[];
 }
