@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 export class UserService {
   constructor(private readonly userRepository: Repository<UserEntity>) {}
 
-  async findUserById(id: string): Promise<any> {
+  async getUserById(id: string): Promise<any> {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .where('user.id = :id', { id })
