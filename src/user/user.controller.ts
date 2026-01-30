@@ -9,10 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthGuard } from 'src/guard/auth.guard';
 import {
   ListUserRequestBodyDTO,
   ParamsUserRequestDTO,
+  UserDataBodyRequestDTO,
 } from './dto/user.request';
 import {
   ListUserRequestBodyResponse,
@@ -31,7 +32,7 @@ export class UserController {
     @Param() param: ParamsUserRequestDTO,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.getUserById(param.id);
+      return await this.userService.getUserById(param);
     } catch (error) {
       throw error;
     }
@@ -51,9 +52,9 @@ export class UserController {
 
   @Post('/')
   @ApiBearerAuth()
-  async createUser(): Promise<any> {
+  async createUser(@Body() body: UserDataBodyRequestDTO): Promise<any> {
     try {
-      return true;
+      return await this.userService.createUser(body);
     } catch (error) {
       throw error;
     }
@@ -63,7 +64,7 @@ export class UserController {
   @ApiBearerAuth()
   async updateUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
-      return true;
+      return await this.userService.updateUser(param);
     } catch (error) {
       throw error;
     }
@@ -73,7 +74,7 @@ export class UserController {
   @ApiBearerAuth()
   async deleteUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
-      return true;
+      return await this.userService.deleteUser(param);
     } catch (error) {
       throw error;
     }

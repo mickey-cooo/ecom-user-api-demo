@@ -9,7 +9,6 @@ export enum UserStatus {
 }
 @Entity('user')
 export class UserEntity extends TemplateEntity {
-  // Additional user-specific columns can be added here
   @Column({ type: 'varchar' })
   nameTh: string;
 
@@ -22,7 +21,7 @@ export class UserEntity extends TemplateEntity {
   @Column({ type: 'varchar' })
   lastNameEn: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   email: string;
 
   @Column({ type: 'varchar', nullable: true })

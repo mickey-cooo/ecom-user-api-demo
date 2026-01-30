@@ -3,30 +3,43 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserEntity, UserStatus } from 'src/db/user.entity';
+import * as bcrypt from 'bcrypt';
+import { UserEntity, UserStatus } from 'src/database/user.entity';
 import { Repository } from 'typeorm';
 import {
   ListUserRequestBodyResponse,
   UserRequestBodyResponse,
 } from './interface/user.interface';
-import { ListUserRequestBodyDTO } from './dto/user.request';
+import {
+  ListUserRequestBodyDTO,
+  ParamsUserRequestDTO,
+  UserDataBodyRequestDTO,
+} from './dto/user.request';
+import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UserService {
   constructor(private readonly userRepository: Repository<UserEntity>) {}
 
-  async getUserById(id: string): Promise<UserRequestBodyResponse> {
-    const user = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.id = :id', { id })
-      .getOne();
+  async getUserById(
+    param: ParamsUserRequestDTO,
+  ): Promise<UserRequestBodyResponse> {
+    try {
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.id = :id', { id: param.id })
+        .getRawOne();
 
-    if (!user) {
-      throw new NotFoundException({
-        message: 'User not found',
-      });
+      if (!user) {
+        throw new NotFoundException({
+          message: 'User not found',
+        });
+      }
+      return user;
+    } catch (error) {
+      throw new Error(error);
     }
-    return user;
   }
 
   async getUserList(
@@ -50,41 +63,38 @@ export class UserService {
     }
   }
 
-  async createUser(): Promise<any> {
-    const queryRunner =
-      this.userRepository.manager.connection.createQueryRunner();
-    await queryRunner.connect();
-
+  async createUser(body: UserDataBodyRequestDTO): Promise<any> {
     try {
-      await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder(`u`)
-        .where(`u.email = :email`, { email: `` })
-        .getOne();
+        .where(`u.email = :email`, { email: body.email })
+        .getRawOne();
 
       if (user) {
         throw new BadRequestException({
           message: 'Email already exists',
         });
       }
+      const newUser = this.userRepository
+        .createQueryBuilder(`u`)
+        .insert()
+        .into(UserEntity)
+        .values({
+          nameTh: body.nameTh,
+          lastNameTh: body.lastNameTh,
+          nameEn: body.nameEn,
+          lastNameEn: body.lastNameEn,
+          phoneNumber: body.phoneNumber,
+        })
+        .execute();
 
-      const newUser = this.userRepository.create({
-        nameTh: '',
-        lastNameTh: '',
-        nameEn: '',
-        lastNameEn: '',
-        email: '',
-        phoneNumber: '',
-        createdBy: '',
-      });
-
-      await this.userRepository.save(newUser);
+      return newUser;
     } catch (error) {
       throw error;
     }
   }
 
-  async updateUser(id: string): Promise<any> {
+  async updateUser(param: ParamsUserRequestDTO): Promise<any> {
     const queryRunner =
       this.userRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -92,24 +102,37 @@ export class UserService {
       await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder(`u`)
-        .where(`u.id = :id`, { id })
+        .where(`u.id = :id`, { id: param.id })
         .andWhere(`u.status != :status`, { status: UserStatus.DELETED })
-        .getOne();
+        .getRawOne();
 
       if (!user) {
         throw new NotFoundException({
           message: 'User not found',
         });
       }
+      const updatedUser = await this.userRepository
+        .createQueryBuilder(`u`, queryRunner)
+        .update()
+        .set({
+          nameTh: '',
+          lastNameTh: '',
+          nameEn: '',
+          lastNameEn: '',
+          email: '',
+          phoneNumber: '',
+          updatedBy: '',
+        })
+        .execute();
 
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
+      console.error(error);
     }
   }
 
-  async deleteUser(id: string): Promise<any> {
+  async deleteUser(param: ParamsUserRequestDTO): Promise<any> {
     const queryRunner =
       this.userRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -117,8 +140,8 @@ export class UserService {
       await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder('user')
-        .where('user.id = :id', { id })
-        .getOne();
+        .where('user.id = :id', { id: param.id })
+        .getRawOne();
 
       if (!user) {
         throw new NotFoundException({
@@ -128,9 +151,72 @@ export class UserService {
 
       user.status = UserStatus.DELETED;
       await this.userRepository.save(user);
+      await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
+      console.error(error);
+    }
+  }
+
+  async register(body: RegisterRequestDTO): Promise<any> {
+    try {
+      const email = await this.userRepository
+        .createQueryBuilder(`u`)
+        .where(`u.email = :email`, { email: body.email })
+        .getRawOne();
+
+      if (email) {
+        throw new BadRequestException({
+          message: 'Email already exists',
+        });
+      }
+
+      const password = uuidv4();
+      const hashPassword = await bcrypt.hash(password, 10);
+
+      const newUser = this.userRepository
+        .createQueryBuilder(`u`)
+        .insert()
+        .into(UserEntity)
+        .values({
+          email: body.email,
+          password: hashPassword,
+        })
+        .execute();
+
+      return newUser;
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
+
+  async signIn(body: SignInRequestDTO): Promise<any> {
+    try {
+      const user = await this.userRepository
+        .createQueryBuilder(`u`)
+        .where(`u.email = :email`, { email: body.email })
+        .getRawOne();
+
+      if (user) {
+        throw new NotFoundException({
+          message: 'User not found',
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(
+        body.password,
+        user.password,
+      );
+
+      if (!isPasswordValid) {
+        throw new BadRequestException({
+          message: 'Invalid email or password',
+        });
+      }
+
+      return user;
+    } catch (error) {
+      throw new Error(error);
     }
   }
 }
