@@ -13,14 +13,18 @@ import {
 import {
   ListUserRequestBodyDTO,
   ParamsUserRequestDTO,
-  UserDataBodyRequestDTO,
 } from './dto/user.request';
 import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { v4 as uuidv4 } from 'uuid';
+import { JwtService } from '@nestjs/jwt';
+import { UserDataBodyRequestDTO } from './dto/create.user.request';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: Repository<UserEntity>) {}
+  constructor(
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async getUserById(
     param: ParamsUserRequestDTO,
@@ -139,8 +143,8 @@ export class UserService {
     try {
       await queryRunner.startTransaction();
       const user = await this.userRepository
-        .createQueryBuilder('user')
-        .where('user.id = :id', { id: param.id })
+        .createQueryBuilder(`u`)
+        .where(`u.id = :id`, { id: param.id })
         .getRawOne();
 
       if (!user) {
@@ -149,9 +153,18 @@ export class UserService {
         });
       }
 
-      user.status = UserStatus.DELETED;
-      await this.userRepository.save(user);
+      const deleteUser = await this.userRepository
+        .createQueryBuilder(`u`, queryRunner)
+        .update(UserEntity)
+        .set({
+          status: UserStatus.DELETED,
+        })
+        .where(`u.id = :id`, { id: param.id })
+        .execute();
+
+      // await this.userRepository.save(user);
       await queryRunner.commitTransaction();
+      return deleteUser;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
@@ -214,7 +227,11 @@ export class UserService {
         });
       }
 
-      return user;
+      const token = this.jwtService.sign({ id: user.id });
+
+      return {
+        token,
+      };
     } catch (error) {
       throw new Error(error);
     }

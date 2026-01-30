@@ -13,13 +13,14 @@ import { AuthGuard } from 'src/guard/auth.guard';
 import {
   ListUserRequestBodyDTO,
   ParamsUserRequestDTO,
-  UserDataBodyRequestDTO,
 } from './dto/user.request';
 import {
   ListUserRequestBodyResponse,
   UserRequestBodyResponse,
 } from './interface/user.interface';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
+import { UserDataBodyRequestDTO } from './dto/create.user.request';
 
 @Controller('user')
 @UseGuards(AuthGuard)
@@ -75,6 +76,24 @@ export class UserController {
   async deleteUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
       return await this.userService.deleteUser(param);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @Post('/sign-in')
+  async signIn(@Body() body: SignInRequestDTO): Promise<any> {
+    try {
+      return await this.userService.signIn(body);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @Post('/register')
+  async register(@Body() body: RegisterRequestDTO): Promise<any> {
+    try {
+      return await this.userService.register(body);
     } catch (error) {
       throw error;
     }
