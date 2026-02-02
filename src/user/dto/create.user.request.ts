@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsString, Max, Min } from 'class-validator';
+import {
+  IsDefined,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UserDataBodyRequestDTO {
   @ApiProperty()
@@ -30,9 +38,10 @@ export class UserDataBodyRequestDTO {
   @ApiProperty()
   @IsDefined()
   @IsString()
-  @Max(10)
+  @MaxLength(10)
   phoneNumber: string;
 
   @ApiProperty()
+  @IsOptional()
   createdBy: string;
 }

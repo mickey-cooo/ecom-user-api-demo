@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { UserEntity, UserStatus } from 'src/database/user.entity';
+import { UserEntity } from 'src/database/user.entity';
 import { Repository } from 'typeorm';
 import {
   ListUserRequestBodyResponse,
@@ -18,12 +18,17 @@ import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
+import { CommonStatus } from 'src/enum/common.status';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MailerEmailService } from 'src/utils/mailer/mailer.service';
 
 @Injectable()
 export class UserService {
   constructor(
+    @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    private readonly mailerService: MailerEmailService,
   ) {}
 
   async getUserById(
@@ -79,7 +84,7 @@ export class UserService {
           message: 'Email already exists',
         });
       }
-      const newUser = this.userRepository
+      const newUser = await this.userRepository
         .createQueryBuilder(`u`)
         .insert()
         .into(UserEntity)
@@ -107,7 +112,7 @@ export class UserService {
       const user = await this.userRepository
         .createQueryBuilder(`u`)
         .where(`u.id = :id`, { id: param.id })
-        .andWhere(`u.status != :status`, { status: UserStatus.DELETED })
+        .andWhere(`u.status != :status`, { status: CommonStatus.DELETED })
         .getRawOne();
 
       if (!user) {
@@ -157,7 +162,7 @@ export class UserService {
         .createQueryBuilder(`u`, queryRunner)
         .update(UserEntity)
         .set({
-          status: UserStatus.DELETED,
+          status: CommonStatus.DELETED,
         })
         .where(`u.id = :id`, { id: param.id })
         .execute();
@@ -196,6 +201,13 @@ export class UserService {
           password: hashPassword,
         })
         .execute();
+
+      const mailer = await this.mailerService.sendEmail({
+        to: body.email,
+        subject: 'Account Registration',
+        body: `Your account has been created. Your password is ${password} Please change your password after logging in.`,
+        text: `Your account has been created. Your password is ${password} Please change your password after logging in.`,
+      });
 
       return newUser;
     } catch (error) {

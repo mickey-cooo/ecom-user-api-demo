@@ -6,6 +6,7 @@ import { Logger } from './utils/logger/logger.service.js';
 async function bootstrap() {
   const logger = new Logger();
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api/v1');
   // app.useLogger(new Logger());
   const config = new DocumentBuilder()
     .setTitle('User API')
@@ -16,6 +17,6 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory());
 
   await app.listen(process.env.PORT ?? 3000);
-  logger.log(`Application is running on: ${3000}`);
+  logger.log(`Application is running on: ${process.env.PORT ?? 3000}`);
 }
 bootstrap();

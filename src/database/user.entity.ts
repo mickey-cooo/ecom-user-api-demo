@@ -1,12 +1,8 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { TemplateEntity } from './template.entity';
+import { CommonStatus } from 'src/enum/common.status';
+import { RoleEntity } from './role.entity';
 
-export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-  DELETED = 'deleted',
-}
 @Entity('user')
 export class UserEntity extends TemplateEntity {
   @Column({ type: 'varchar' })
@@ -30,6 +26,9 @@ export class UserEntity extends TemplateEntity {
   @Column({ type: 'varchar' })
   phoneNumber: string;
 
-  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
-  status: UserStatus;
+  @Column({ type: 'enum', enum: CommonStatus, default: CommonStatus.ACTIVE })
+  status: CommonStatus;
+
+  @OneToMany(() => RoleEntity, (role) => role.user_uuid)
+  role_uuid: RoleEntity[];
 }
