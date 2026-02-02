@@ -23,7 +23,7 @@ import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
 
 @Controller('user')
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -52,7 +52,7 @@ export class UserController {
   }
 
   @Post('/')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   async createUser(@Body() body: UserDataBodyRequestDTO): Promise<any> {
     try {
       return await this.userService.createUser(body);
