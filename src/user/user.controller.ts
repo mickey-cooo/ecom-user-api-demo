@@ -33,7 +33,7 @@ export class UserController {
     @Param() param: ParamsUserRequestDTO,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.getUserById(param);
+      return await this.userService.getUserById(param.id);
     } catch (error) {
       throw error;
     }
@@ -65,7 +65,7 @@ export class UserController {
   @ApiBearerAuth()
   async updateUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
-      return await this.userService.updateUser(param);
+      return await this.userService.updateUser(param.id);
     } catch (error) {
       throw error;
     }
@@ -75,7 +75,7 @@ export class UserController {
   @ApiBearerAuth()
   async deleteUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
-      return await this.userService.deleteUser(param);
+      return await this.userService.deleteUser(param.id);
     } catch (error) {
       throw error;
     }
@@ -85,6 +85,7 @@ export class UserController {
   async signIn(@Body() body: SignInRequestDTO): Promise<any> {
     try {
       return await this.userService.signIn(body);
+      // mickey na hee
     } catch (error) {
       throw error;
     }
