@@ -251,8 +251,10 @@ export class UserService {
         text: `Your account has been created. Your password is ${password} Please change your password after logging in.`,
       });
 
-      if (mailer.success) {
-        return true;
+      if (mailer.failed.length) {
+        throw new BadRequestException({
+          message: 'Cannot send email to your address',
+        });
       }
 
       return newUser;

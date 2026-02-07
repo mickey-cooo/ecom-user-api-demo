@@ -22,7 +22,7 @@ export class RoleService {
     try {
       const role = await this.roleRepository
         .createQueryBuilder(`r`)
-        .where(`r.id = :id`, { id: param.id })
+        .where(`r.uuid = :id`, { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -94,7 +94,7 @@ export class RoleService {
     try {
       const role = await this.roleRepository
         .createQueryBuilder(`r`, queryRunner)
-        .where(`r.id = :id`, { id: param.id })
+        .where(`r.uuid = :id`, { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -131,7 +131,7 @@ export class RoleService {
     try {
       const role = await this.roleRepository
         .createQueryBuilder(`r`, queryRunner)
-        .where(`r.id = :id`, { id: param.id })
+        .where(`r.uuid = :id`, { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -139,17 +139,18 @@ export class RoleService {
           message: 'Role not found',
         });
       }
-      queryRunner.startTransaction();
-      const deleteRole = await this.roleRepository
+      await queryRunner.startTransaction();
+      const deletedRole = await this.roleRepository
         .createQueryBuilder(`r`, queryRunner)
         .update(RoleEntity)
-        .where(`r.id = :id`, { id: param.id })
+        .where(`r.uuid = :id`, { id: param.id })
         .set({
           status: CommonStatus.DELETED,
         })
         .execute();
 
       await queryRunner.commitTransaction();
+      return deletedRole;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
