@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -21,6 +22,7 @@ import {
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
+import { UpdateUserRequestDTO } from './dto/update.user.request';
 
 @Controller('user')
 // @UseGuards(AuthGuard)
@@ -33,7 +35,7 @@ export class UserController {
     @Param() param: ParamsUserRequestDTO,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.getUserById(param.id);
+      return await this.userService.getUserById(param);
     } catch (error) {
       throw error;
     }
@@ -53,9 +55,12 @@ export class UserController {
 
   @Post('/')
   // @ApiBearerAuth()
-  async createUser(@Body() body: UserDataBodyRequestDTO): Promise<any> {
+  async createUser(
+    @Body() body: UserDataBodyRequestDTO,
+    @Req() req: Request,
+  ): Promise<any> {
     try {
-      return await this.userService.createUser(body);
+      return await this.userService.createUser(body, req);
     } catch (error) {
       throw error;
     }
@@ -63,9 +68,12 @@ export class UserController {
 
   @Patch('/:id')
   @ApiBearerAuth()
-  async updateUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
+  async updateUser(
+    @Param() param: ParamsUserRequestDTO,
+    @Body() body: UpdateUserRequestDTO,
+  ): Promise<any> {
     try {
-      return await this.userService.updateUser(param.id);
+      return await this.userService.updateUser(param, body);
     } catch (error) {
       throw error;
     }
@@ -75,7 +83,7 @@ export class UserController {
   @ApiBearerAuth()
   async deleteUser(@Param() param: ParamsUserRequestDTO): Promise<any> {
     try {
-      return await this.userService.deleteUser(param.id);
+      return await this.userService.deleteUser(param);
     } catch (error) {
       throw error;
     }

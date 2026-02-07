@@ -18,9 +18,10 @@ import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
-import { CommonStatus } from 'src/enum/common.status';
+import { CommonStatus } from '../enum/common.status';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MailerEmailService } from 'src/utils/mailer/mailer.service';
+import { MailerEmailService } from 'src/mailer/mailer.service';
+import { UpdateUserRequestDTO } from './dto/update.user.request';
 
 @Injectable()
 export class UserService {
@@ -72,7 +73,7 @@ export class UserService {
     }
   }
 
-  async createUser(body: UserDataBodyRequestDTO): Promise<any> {
+  async createUser(body: UserDataBodyRequestDTO, req: Request): Promise<any> {
     try {
       const user = await this.userRepository
         .createQueryBuilder(`u`)
@@ -94,6 +95,7 @@ export class UserService {
           nameEn: body.nameEn,
           lastNameEn: body.lastNameEn,
           phoneNumber: body.phoneNumber,
+          createdBy: req.headers['x-user-token'],
         })
         .execute();
 
@@ -103,7 +105,10 @@ export class UserService {
     }
   }
 
-  async updateUser(param: ParamsUserRequestDTO): Promise<any> {
+  async updateUser(
+    param: ParamsUserRequestDTO,
+    body: UpdateUserRequestDTO,
+  ): Promise<any> {
     const queryRunner =
       this.userRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -124,17 +129,17 @@ export class UserService {
         .createQueryBuilder(`u`, queryRunner)
         .update()
         .set({
-          nameTh: '',
-          lastNameTh: '',
-          nameEn: '',
-          lastNameEn: '',
-          email: '',
-          phoneNumber: '',
-          updatedBy: '',
+          nameTh: body.nameTh,
+          lastNameTh: body.lastNameTh,
+          nameEn: body.nameEn,
+          lastNameEn: body.lastNameEn,
+          phoneNumber: body.phoneNumber,
+          updatedBy: body.token,
         })
         .execute();
 
       await queryRunner.commitTransaction();
+      return updatedUser;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
@@ -167,7 +172,6 @@ export class UserService {
         .where(`u.id = :id`, { id: param.id })
         .execute();
 
-      // await this.userRepository.save(user);
       await queryRunner.commitTransaction();
       return deleteUser;
     } catch (error) {
@@ -208,6 +212,10 @@ export class UserService {
         body: `Your account has been created. Your password is ${password} Please change your password after logging in.`,
         text: `Your account has been created. Your password is ${password} Please change your password after logging in.`,
       });
+
+      if (mailer.success) {
+        return true;
+      }
 
       return newUser;
     } catch (error) {

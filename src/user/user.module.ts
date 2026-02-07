@@ -4,8 +4,8 @@ import { UserService } from './user.service';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from 'src/database/user.entity';
-import { MailerAppModule } from 'src/utils/mailer/mailer.module';
-import { MailerEmailService } from 'src/utils/mailer/mailer.service';
+import { MailerAppModule } from 'src/mailer/mailer.module';
+import { MailerEmailService } from 'src/mailer/mailer.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserEntity]), JwtModule.register({})],

@@ -4,15 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { RoleEntity } from 'src/database/role.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   ListRoleRequestBodyDTO,
   ParamsRoleRequestDTO,
 } from './dto/role.request';
+import { CommonStatus } from 'src/enum/common.status';
 
 @Injectable()
 export class RoleService {
-  constructor(private readonly roleRepository: Repository<RoleEntity>) {}
+  constructor(
+    private readonly roleRepository: Repository<RoleEntity>,
+    private dataSource: DataSource,
+  ) {}
 
   async getRoleById(param: ParamsRoleRequestDTO): Promise<any> {
     try {
@@ -84,10 +88,8 @@ export class RoleService {
   }
 
   async update(param: ParamsRoleRequestDTO, body: any): Promise<any> {
-    const queryRunner =
-      await this.roleRepository.manager.connection.createQueryRunner();
+    const queryRunner = await this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
       const role = await this.roleRepository
@@ -100,6 +102,7 @@ export class RoleService {
           message: 'Role not found',
         });
       }
+      await queryRunner.startTransaction();
 
       const updatedRole = await this.roleRepository
         .createQueryBuilder(`r`, queryRunner)
@@ -116,6 +119,42 @@ export class RoleService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async delete(param: ParamsRoleRequestDTO): Promise<any> {
+    const queryRunner = await this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    try {
+      const role = await this.roleRepository
+        .createQueryBuilder(`r`, queryRunner)
+        .where(`r.id = :id`, { id: param.id })
+        .getRawOne();
+
+      if (!role) {
+        throw new NotFoundException({
+          message: 'Role not found',
+        });
+      }
+      queryRunner.startTransaction();
+      const deleteRole = await this.roleRepository
+        .createQueryBuilder(`r`, queryRunner)
+        .update(RoleEntity)
+        .where(`r.id = :id`, { id: param.id })
+        .set({
+          status: CommonStatus.DELETED,
+        })
+        .execute();
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error(error);
+    } finally {
+      await queryRunner.release();
     }
   }
 }
