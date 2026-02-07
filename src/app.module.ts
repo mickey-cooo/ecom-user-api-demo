@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { modules } from './modules/modules';
+import { GoogleModule } from './google/google.module';
 
 @Module({
   imports: [
@@ -24,9 +25,11 @@ import { modules } from './modules/modules';
         database: configService.get<string>('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        logging: true,
       }),
     }),
     ...modules,
+    GoogleModule,
   ],
 })
 export class AppModule {}

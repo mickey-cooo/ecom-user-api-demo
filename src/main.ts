@@ -2,12 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from './utils/logger/logger.service.js';
+import { HttpExceptionalFilter } from './utils/exceptionalFilter/exceptionalFilter.js';
 
 async function bootstrap() {
   const logger = new Logger();
   const app = await NestFactory.create(AppModule);
+
   app.setGlobalPrefix('api/v1');
   app.enableCors();
+  app.useGlobalFilters(new HttpExceptionalFilter(logger.error.bind(logger)));
   // app.useLogger(new Logger());
   const config = new DocumentBuilder()
     .setTitle('User API')

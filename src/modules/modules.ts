@@ -1,8 +1,7 @@
 import { JwtModule } from '@nestjs/jwt';
-import { UserModule } from 'src/user/user.module';
-import { MailerAppModule } from 'src/mailer/mailer.module';
-import { PaginationModule } from 'src/pagination/pagination.mudule';
-import { DataSource } from 'typeorm/browser';
+import { UserModule } from '../user/user.module';
+import { MailerAppModule } from '../mailer/mailer.module';
+import { PaginationModule } from '../pagination/pagination.mudule';
 
 export const modules = [
   UserModule,

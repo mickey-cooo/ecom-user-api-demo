@@ -4,8 +4,8 @@ import {
   ListRoleRequestBodyDTO,
   ParamsRoleRequestDTO,
 } from './dto/role.request';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { RoleGuard } from 'src/guard/role.guard';
+import { AuthGuard } from '../guard/auth.guard';
+import { RoleGuard } from '../guard/role.guard';
 
 @Controller('role')
 @UseGuards(AuthGuard, RoleGuard)

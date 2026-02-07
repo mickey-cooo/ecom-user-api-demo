@@ -3,13 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RoleEntity } from 'src/database/role.entity';
+import { RoleEntity } from '../database/role.entity';
 import { DataSource, Repository } from 'typeorm';
 import {
   ListRoleRequestBodyDTO,
   ParamsRoleRequestDTO,
 } from './dto/role.request';
-import { CommonStatus } from 'src/enum/common.status';
+import { CommonStatus } from '../enum/common.status';
 
 @Injectable()
 export class RoleService {
@@ -21,8 +21,8 @@ export class RoleService {
   async getRoleById(param: ParamsRoleRequestDTO): Promise<any> {
     try {
       const role = await this.roleRepository
-        .createQueryBuilder(`r`)
-        .where(`r.uuid = :id`, { id: param.id })
+        .createQueryBuilder('r')
+        .where('r.uuid = :id', { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -40,7 +40,7 @@ export class RoleService {
   async getAllRoles(body: ListRoleRequestBodyDTO): Promise<any> {
     try {
       const roles = await this.roleRepository
-        .createQueryBuilder(`r`)
+        .createQueryBuilder('r')
         .andWhereInIds(body.ids)
         .getRawMany();
 
@@ -59,8 +59,8 @@ export class RoleService {
   async create(body: any): Promise<any> {
     try {
       const role = await this.roleRepository
-        .createQueryBuilder(`r`)
-        .where(`r.name = :name`, { name: body.name })
+        .createQueryBuilder('r')
+        .where('r.name = :name', { name: body.name })
         .getRawOne();
 
       if (role) {
@@ -70,7 +70,7 @@ export class RoleService {
       }
 
       const newRole = await this.roleRepository
-        .createQueryBuilder(`r`)
+        .createQueryBuilder('r')
         .insert()
         .into(RoleEntity)
         .values({
@@ -93,8 +93,8 @@ export class RoleService {
 
     try {
       const role = await this.roleRepository
-        .createQueryBuilder(`r`, queryRunner)
-        .where(`r.uuid = :id`, { id: param.id })
+        .createQueryBuilder('r', queryRunner)
+        .where('r.uuid = :id', { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -105,7 +105,7 @@ export class RoleService {
       await queryRunner.startTransaction();
 
       const updatedRole = await this.roleRepository
-        .createQueryBuilder(`r`, queryRunner)
+        .createQueryBuilder('r', queryRunner)
         .update(RoleEntity)
         .set({
           name: body.name,
@@ -130,8 +130,8 @@ export class RoleService {
     await queryRunner.connect();
     try {
       const role = await this.roleRepository
-        .createQueryBuilder(`r`, queryRunner)
-        .where(`r.uuid = :id`, { id: param.id })
+        .createQueryBuilder('r', queryRunner)
+        .where('r.uuid = :id', { id: param.id })
         .getRawOne();
 
       if (!role) {
@@ -141,9 +141,9 @@ export class RoleService {
       }
       await queryRunner.startTransaction();
       const deletedRole = await this.roleRepository
-        .createQueryBuilder(`r`, queryRunner)
+        .createQueryBuilder('r', queryRunner)
         .update(RoleEntity)
-        .where(`r.uuid = :id`, { id: param.id })
+        .where('r.uuid = :id', { id: param.id })
         .set({
           status: CommonStatus.DELETED,
         })

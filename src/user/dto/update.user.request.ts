@@ -1,6 +1,6 @@
 import { Optional } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class UpdateUserRequestDTO {
   @ApiProperty()
@@ -27,6 +27,11 @@ export class UpdateUserRequestDTO {
   @IsDefined()
   @IsString()
   phoneNumber?: string;
+
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 
   @ApiProperty()
   @Optional()
