@@ -7,6 +7,7 @@ async function bootstrap() {
   const logger = new Logger();
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
+  app.enableCors();
   // app.useLogger(new Logger());
   const config = new DocumentBuilder()
     .setTitle('User API')
