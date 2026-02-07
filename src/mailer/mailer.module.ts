@@ -21,5 +21,6 @@ import { MailerEmailService } from './mailer.service';
   ],
   controllers: [MailerController],
   providers: [MailerEmailService],
+  exports: [MailerEmailService],
 })
 export class MailerAppModule {}

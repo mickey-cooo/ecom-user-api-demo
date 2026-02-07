@@ -20,8 +20,11 @@ import { JwtService } from '@nestjs/jwt';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
 import { CommonStatus } from '../enum/common.status';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MailerEmailService } from 'src/mailer/mailer.service';
+import { MailerEmailService } from '../mailer/mailer.service';
 import { UpdateUserRequestDTO } from './dto/update.user.request';
+import { PaginationService } from '../pagination/pagination.service';
+import { PaginationRequestDTO } from 'src/pagination/dto/pagination.request.dto';
+import { PaginationResult } from 'src/pagination/inteface/pagination.interface';
 
 @Injectable()
 export class UserService {
@@ -30,6 +33,7 @@ export class UserService {
     private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerEmailService,
+    private readonly paginationService: PaginationService,
     private dataSource: DataSource,
   ) {}
 
@@ -38,8 +42,20 @@ export class UserService {
   ): Promise<UserRequestBodyResponse> {
     try {
       const user = await this.userRepository
-        .createQueryBuilder('user')
-        .where('user.id = :id', { id: param.id })
+        .createQueryBuilder('u')
+        .select([
+          `u.uuid AS "uuid"`,
+          `u.nameTh AS "nameTh"`,
+          `u.lastNameTh AS "lastNameTh"`,
+          `u.nameEn AS "nameEn"`,
+          `u.lastNameEn AS "lastNameEn"`,
+          `u.email AS "email"`,
+          `u.phoneNumber AS "phoneNumber"`,
+          `u.status AS "status"`,
+          `u.createdAt AS "createdAt"`,
+        ])
+        .where('u.uuid = :id', { id: param.id })
+        .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
         .getRawOne();
 
       if (!user) {
@@ -55,11 +71,24 @@ export class UserService {
 
   async getUserList(
     body: ListUserRequestBodyDTO,
-  ): Promise<ListUserRequestBodyResponse[]> {
+    query: PaginationRequestDTO,
+  ): Promise<PaginationResult<ListUserRequestBodyResponse>> {
     try {
       const users = await this.userRepository
-        .createQueryBuilder('user')
+        .createQueryBuilder(`u`)
+        .select([
+          `u.uuid AS "uuid"`,
+          `u.nameTh AS "nameTh"`,
+          `u.lastNameTh AS "lastNameTh"`,
+          `u.nameEn AS "nameEn"`,
+          `u.lastNameEn AS "lastNameEn"`,
+          `u.email AS "email"`,
+          `u.phoneNumber AS "phoneNumber"`,
+          `u.status AS "status"`,
+          `u.createdAt AS "createdAt"`,
+        ])
         .whereInIds(body.ids)
+        .orderBy('u.uuid', 'DESC')
         .getRawMany();
 
       if (!users.length) {
@@ -68,13 +97,21 @@ export class UserService {
         });
       }
 
-      return users;
+      const result = this.paginationService.paginateArray(users, query);
+      const data = {
+        data: result.data,
+        pagination: result.pagination,
+      };
+      return data;
     } catch (error) {
       throw error;
     }
   }
 
-  async createUser(body: UserDataBodyRequestDTO, req: Request): Promise<any> {
+  async createUser(
+    body: UserDataBodyRequestDTO,
+    req: Request,
+  ): Promise<UserRequestBodyResponse> {
     try {
       const user = await this.userRepository
         .createQueryBuilder(`u`)
@@ -98,9 +135,10 @@ export class UserService {
           phoneNumber: body.phoneNumber,
           createdBy: req.headers['x-user-token'],
         })
+        .returning('*')
         .execute();
 
-      return newUser;
+      return newUser.raw[0];
     } catch (error) {
       throw error;
     }
@@ -116,8 +154,8 @@ export class UserService {
       await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder(`u`)
-        .where(`u.id = :id`, { id: param.id })
-        .andWhere(`u.status != :status`, { status: CommonStatus.DELETED })
+        .where(`u.uuid = :id`, { id: param.id })
+        .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
         .getRawOne();
 
       if (!user) {
@@ -153,7 +191,8 @@ export class UserService {
       await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder(`u`)
-        .where(`u.id = :id`, { id: param.id })
+        .where(`u.uuid = :id`, { id: param.id })
+        .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
         .getRawOne();
 
       if (!user) {
@@ -168,7 +207,7 @@ export class UserService {
         .set({
           status: CommonStatus.DELETED,
         })
-        .where(`u.id = :id`, { id: param.id })
+        .where(`u.uuid = :id`, { id: param.id })
         .execute();
 
       await queryRunner.commitTransaction();

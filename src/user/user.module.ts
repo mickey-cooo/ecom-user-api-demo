@@ -1,15 +1,21 @@
 import { Module } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from 'src/database/user.entity';
 import { MailerAppModule } from 'src/mailer/mailer.module';
-import { MailerEmailService } from 'src/mailer/mailer.service';
+import { PaginationModule } from 'src/pagination/pagination.mudule';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity]), JwtModule.register({})],
+  imports: [
+    TypeOrmModule.forFeature([UserEntity]),
+    JwtModule.register({}),
+    MailerAppModule,
+    PaginationModule,
+  ],
   controllers: [UserController],
-  providers: [UserService, MailerEmailService],
+  providers: [UserService],
+  exports: [UserService],
 })
 export class UserModule {}

@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsDefined,
+  IsEmail,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ParamsUserRequestDTO {
   @ApiProperty()
@@ -11,5 +18,6 @@ export class ParamsUserRequestDTO {
 export class ListUserRequestBodyDTO {
   @ApiProperty()
   @IsDefined()
+  @IsArray()
   ids: string[];
 }

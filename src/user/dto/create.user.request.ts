@@ -31,7 +31,7 @@ export class UserDataBodyRequestDTO {
   lastNameEn: string;
 
   @ApiProperty()
-  @IsDefined()
+  @IsOptional()
   @IsEmail()
   email: string;
 

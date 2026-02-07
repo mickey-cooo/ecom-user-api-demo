@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,13 +24,15 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
 import { UpdateUserRequestDTO } from './dto/update.user.request';
+import { PaginationRequestDTO } from 'src/pagination/dto/pagination.request.dto';
+import { PaginationResult } from 'src/pagination/inteface/pagination.interface';
 
 @Controller('user')
 // @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('/')
+  @Get('/:id')
   @ApiBearerAuth()
   async getUser(
     @Param() param: ParamsUserRequestDTO,
@@ -45,9 +48,10 @@ export class UserController {
   @ApiBearerAuth()
   async getUserList(
     @Body() body: ListUserRequestBodyDTO,
-  ): Promise<ListUserRequestBodyResponse[]> {
+    @Query() query: PaginationRequestDTO,
+  ): Promise<PaginationResult<ListUserRequestBodyResponse>> {
     try {
-      return await this.userService.getUserList(body);
+      return await this.userService.getUserList(body, query);
     } catch (error) {
       throw error;
     }
@@ -58,7 +62,7 @@ export class UserController {
   async createUser(
     @Body() body: UserDataBodyRequestDTO,
     @Req() req: Request,
-  ): Promise<any> {
+  ): Promise<UserRequestBodyResponse> {
     try {
       return await this.userService.createUser(body, req);
     } catch (error) {
@@ -93,7 +97,6 @@ export class UserController {
   async signIn(@Body() body: SignInRequestDTO): Promise<any> {
     try {
       return await this.userService.signIn(body);
-      // mickey na hee
     } catch (error) {
       throw error;
     }
