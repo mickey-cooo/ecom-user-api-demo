@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserEntity } from 'src/database/user.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   ListUserRequestBodyResponse,
   UserRequestBodyResponse,
@@ -30,6 +30,7 @@ export class UserService {
     private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerEmailService,
+    private dataSource: DataSource,
   ) {}
 
   async getUserById(
@@ -109,8 +110,7 @@ export class UserService {
     param: ParamsUserRequestDTO,
     body: UpdateUserRequestDTO,
   ): Promise<any> {
-    const queryRunner =
-      this.userRepository.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     try {
       await queryRunner.startTransaction();
@@ -147,8 +147,7 @@ export class UserService {
   }
 
   async deleteUser(param: ParamsUserRequestDTO): Promise<any> {
-    const queryRunner =
-      this.userRepository.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     try {
       await queryRunner.startTransaction();
