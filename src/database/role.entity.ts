@@ -2,8 +2,8 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { TemplateEntity } from './template.entity';
 
 import { UserEntity } from './user.entity';
-import { RoleType } from 'src/enum/role.status';
-import { CommonStatus } from 'src/enum/common.status';
+import { RoleType } from '../enum/role.status';
+import { CommonStatus } from '../enum/common.status';
 
 @Entity('role')
 export class RoleEntity extends TemplateEntity {

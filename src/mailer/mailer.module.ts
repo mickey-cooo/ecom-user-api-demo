@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { AppController } from 'src/app.controller';
-import { AppService } from 'src/app.service';
+import { AppController } from '../app.controller';
+import { AppService } from '../app.service';
 import { MailerController } from './mailer.controller';
 import { MailerEmailService } from './mailer.service';
 
@@ -10,11 +10,17 @@ import { MailerEmailService } from './mailer.service';
     MailerModule.forRoot({
       transport: {
         host: process.env.MAILER_HOST,
-        port: 587,
-        secure: false,
+        port: process.env.MAILER_PORT,
+        secure: true,
         auth: {
           user: process.env.MAILER_USER,
           pass: process.env.MAILER_PASSWORD,
+        },
+        defaults: {
+          from: '<noreply@example.com>', // Default sender address
+        },
+        tls: {
+          rejectUnauthorized: false,
         },
       },
     }),

@@ -26,6 +26,7 @@ export class AuthGuard {
     } catch (error) {
       throw new UnauthorizedException();
     }
+    return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {

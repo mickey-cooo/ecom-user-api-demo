@@ -3,31 +3,34 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   Patch,
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { UserService } from './user.service';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { AuthGuard } from '../guard/auth.guard';
 import {
   ListUserRequestBodyDTO,
   ParamsUserRequestDTO,
 } from './dto/user.request';
-import {
-  ListUserRequestBodyResponse,
-  UserRequestBodyResponse,
-} from './interface/user.interface';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { RegisterRequestDTO, SignInRequestDTO } from './dto/auth.request';
+import { UserRequestBodyResponse } from './interface/user.interface';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserDataBodyRequestDTO } from './dto/create.user.request';
 import { UpdateUserRequestDTO } from './dto/update.user.request';
-import { PaginationRequestDTO } from 'src/pagination/dto/pagination.request.dto';
-import { PaginationResult } from 'src/pagination/inteface/pagination.interface';
+import { PaginationRequestDTO } from '../pagination/dto/pagination.request.dto';
+import { Token } from '../decorator/token.decorator';
+import { SignInRequestDTO } from './dto/login.request';
+import { RegisterRequestDTO } from './dto/register.request';
+import { ResetPasswordRequestDTO } from './dto/reset-password.request';
 
 @Controller('user')
+@ApiTags('User')
 // @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -49,22 +52,23 @@ export class UserController {
   async getUserList(
     @Body() body: ListUserRequestBodyDTO,
     @Query() query: PaginationRequestDTO,
-  ): Promise<PaginationResult<ListUserRequestBodyResponse>> {
+  ) {
     try {
       return await this.userService.getUserList(body, query);
     } catch (error) {
-      throw error;
+      throw new Error(error);
     }
   }
 
   @Post('/')
-  // @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   async createUser(
     @Body() body: UserDataBodyRequestDTO,
     @Req() req: Request,
+    @Token() token: string,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.createUser(body, req);
+      return await this.userService.createUser(body, req, token);
     } catch (error) {
       throw error;
     }
@@ -94,20 +98,35 @@ export class UserController {
   }
 
   @Post('/sign-in')
-  async signIn(@Body() body: SignInRequestDTO): Promise<any> {
+  async signIn(@Body() body: SignInRequestDTO, @Res() res: Response) {
     try {
       return await this.userService.signIn(body);
     } catch (error) {
-      throw error;
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
+      res.json({ success: false, message: error.message });
     }
   }
 
   @Post('/register')
-  async register(@Body() body: RegisterRequestDTO): Promise<any> {
+  async register(@Body() body: RegisterRequestDTO, @Res() res: Response) {
     try {
       return await this.userService.register(body);
     } catch (error) {
-      throw error;
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
+      res.json({ success: false, message: error.message });
+    }
+  }
+
+  @Patch('/reset-password')
+  async resetPassword(
+    @Body() body: ResetPasswordRequestDTO,
+    @Res() res: Response,
+  ) {
+    try {
+      return await this.userService.resetPassword(body);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
+      res.json({ success: false, message: error.message });
     }
   }
 }

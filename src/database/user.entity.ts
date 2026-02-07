@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { TemplateEntity } from './template.entity';
-import { CommonStatus } from 'src/enum/common.status';
+import { CommonStatus } from '../enum/common.status';
 import { RoleEntity } from './role.entity';
 
 @Entity('user')

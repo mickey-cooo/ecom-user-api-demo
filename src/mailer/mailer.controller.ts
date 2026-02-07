@@ -2,7 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { MailerEmailService } from './mailer.service';
 import { MailderRequestDTO } from './dto/mailer.request';
 
-@Controller()
+@Controller('mailer')
 export class MailerController {
   constructor(private readonly mailerService: MailerEmailService) {}
   @Post('/send-email')
