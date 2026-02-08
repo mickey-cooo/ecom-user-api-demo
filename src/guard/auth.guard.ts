@@ -20,9 +20,11 @@ export class AuthGuard {
     if (!token) {
       throw new UnauthorizedException();
     }
+
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      request['user'] = payload;
+      request.user = payload;
+      request.token = token;
     } catch (error) {
       throw new UnauthorizedException();
     }

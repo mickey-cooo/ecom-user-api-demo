@@ -16,7 +16,10 @@ import {
 } from './dto/user.request';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
-import { UserDataBodyRequestDTO } from './dto/create.user.request';
+import {
+  CreateUserAdminRequestDTO,
+  UserDataBodyRequestDTO,
+} from './dto/create.user.request';
 import { CommonStatus } from '../enum/common.status';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MailerEmailService } from '../mailer/mailer.service';
@@ -27,12 +30,17 @@ import { PaginationResult } from '../pagination/inteface/pagination.interface';
 import { ResetPasswordRequestDTO } from './dto/reset-password.request';
 import { RegisterByEmailDTO, RegisterRequestDTO } from './dto/register.request';
 import { SignInRequestDTO } from './dto/login.request';
+import { ResetPasswordEntity } from 'src/database/reset-password.entity';
+import { ResetPasswordStatus } from 'src/enum/reset.password.status';
+import { UpdateUserInterface } from './interface/update.interface';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(ResetPasswordEntity)
+    private readonly resetPasswordRepository: Repository<ResetPasswordEntity>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerEmailService,
     private readonly paginationService: PaginationService,
@@ -58,7 +66,7 @@ export class UserService {
         ])
         .where('u.uuid = :id', { id: param.id })
         .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
-        .getRawOne();
+        .getOne();
 
       if (!user) {
         throw new NotFoundException({
@@ -114,11 +122,13 @@ export class UserService {
   }
 
   async createUser(
-    body: UserDataBodyRequestDTO,
-    req: Request,
+    body: CreateUserAdminRequestDTO,
     token: string,
   ): Promise<UserRequestBodyResponse> {
     try {
+      const payload = this.jwtService.verify(token);
+      const userId = payload.id;
+
       const user = await this.userRepository
         .createQueryBuilder('u')
         .where('u.email = :email', { email: body.email })
@@ -130,40 +140,99 @@ export class UserService {
           message: 'Email already exists',
         });
       }
+
+      const tempPassword = uuidv4();
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
       const newUser = await this.userRepository
         .createQueryBuilder('u')
-        .update()
-        .set({
+        .insert()
+        .into(UserEntity)
+        .values({
           nameTh: body.nameTh,
           lastNameTh: body.lastNameTh,
           nameEn: body.nameEn,
           lastNameEn: body.lastNameEn,
+          email: body.email,
+          password: hashedPassword,
           phoneNumber: body.phoneNumber,
-          createdBy: token,
+          createdBy: userId,
         })
-        .where('u.email = :email', { email: body.email })
         .returning('*')
         .execute();
 
-      return newUser.raw[0];
+      const resetToken = this.jwtService.sign(
+        { sub: newUser.raw[0].uuid, type: 'password-reset' },
+        { expiresIn: '24h' },
+      );
+
+      const expiredAt = new Date();
+      expiredAt.setHours(expiredAt.getHours() + 24);
+
+      await this.resetPasswordRepository
+        .createQueryBuilder('rp')
+        .insert()
+        .into(ResetPasswordEntity)
+        .values({
+          user: newUser.raw[0].uuid,
+          resetToken: resetToken,
+          expiredAt: expiredAt,
+          status: ResetPasswordStatus.PENDING,
+        })
+        .execute();
+
+      const resetUrl = `https://your-frontend-domain.com/reset-password?token=${resetToken}`;
+
+      try {
+        await this.mailerService.sendEmail({
+          to: body.email || '',
+          subject: 'Set Your Password',
+          text: `Click the link to set your password: ${resetUrl}`,
+          body: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome!</h2>
+            <p>Your account has been created by administrator.</p>
+            <p>Please click the button below to set your password:</p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 16px 0;">
+              Set Password
+            </a>
+            <p style="color: #666; font-size: 14px;">
+              This link will expire in 24 hours.
+            </p>
+          </div>
+        `,
+        });
+      } catch (error) {
+        console.error('Failed to send set password email:', error);
+        throw new BadRequestException({
+          message: 'Cannot send email to the provided address',
+        });
+      }
+
+      return {
+        ...newUser.raw[0],
+        message:
+          'User created successfully. Password setup link sent via email.',
+      };
     } catch (error) {
-      throw error;
+      throw new Error(error);
     }
   }
 
   async updateUser(
     param: ParamsUserRequestDTO,
     body: UpdateUserRequestDTO,
-  ): Promise<any> {
+  ): Promise<UpdateUserInterface> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
+
     try {
       await queryRunner.startTransaction();
       const user = await this.userRepository
         .createQueryBuilder('u')
         .where('u.uuid = :id', { id: param.id })
         .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
-        .getRawOne();
+        .getOne();
 
       if (!user) {
         throw new NotFoundException({
@@ -180,15 +249,30 @@ export class UserService {
           lastNameEn: body.lastNameEn,
           phoneNumber: body.phoneNumber,
           email: body.email,
-          updatedBy: body.token,
+          updatedBy: user.uuid,
         })
+        .where('uuid = :id', { id: param.id })
+        .returning('*')
         .execute();
 
       await queryRunner.commitTransaction();
-      return updatedUser;
+      const result = updatedUser.raw[0];
+
+      return {
+        uuid: result.uuid,
+        nameTh: result.nameTh,
+        lastNameTh: result.lastNameTh,
+        nameEn: result.nameEn,
+        lastNameEn: result.lastNameEn,
+        phoneNumber: result.phoneNumber,
+        email: result.email,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
+      throw new Error(error);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -201,7 +285,7 @@ export class UserService {
         .createQueryBuilder('u')
         .where('u.uuid = :id', { id: param.id })
         .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
-        .getRawOne();
+        .getOne();
 
       if (!user) {
         throw new NotFoundException({
@@ -215,7 +299,8 @@ export class UserService {
         .set({
           status: CommonStatus.DELETED,
         })
-        .where('u.uuid = :id', { id: param.id })
+        .where('uuid = :id', { id: param.id })
+        .returning('*')
         .execute();
 
       await queryRunner.commitTransaction();
@@ -223,6 +308,8 @@ export class UserService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -234,23 +321,19 @@ export class UserService {
         .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
         .getRawOne();
 
-      if (!user) {
+      if (user) {
         throw new BadRequestException({
           message: 'Email already exists',
         });
       }
 
-      const comparedPassword = await bcrypt.compare(
-        body.password,
-        body.confirmPassword,
-      );
-      if (!comparedPassword) {
+      if (body.password !== body.confirmPassword) {
         throw new BadRequestException({
           message: 'Password and Confirm Password do not match',
         });
       }
-
       const hashedPassword = await bcrypt.hash(body.password, 10);
+
       const newUser = await this.userRepository
         .createQueryBuilder('u')
         .insert()
@@ -261,7 +344,13 @@ export class UserService {
         })
         .execute();
 
-      return newUser;
+      return {
+        message: 'User registered successfully',
+        user: {
+          uuid: newUser.raw[0].uuid,
+          email: newUser.raw[0].email,
+        },
+      };
     } catch (error) {
       throw new Error(error);
     }
@@ -313,20 +402,19 @@ export class UserService {
     }
   }
 
-  async signIn(body: SignInRequestDTO) {
+  async signIn(body: SignInRequestDTO): Promise<any> {
     try {
       const user = await this.userRepository
         .createQueryBuilder('u')
         .where('u.email = :email', { email: body.email })
         .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
-        .getRawOne();
+        .getOne();
 
-      if (user) {
+      if (!user) {
         throw new NotFoundException({
           message: 'User not found',
         });
       }
-
       const isPasswordValid = await bcrypt.compare(
         body.password,
         user.password,
@@ -338,71 +426,93 @@ export class UserService {
         });
       }
 
-      const token = this.jwtService.sign({ id: user.id });
+      const accessToken = this.jwtService.sign({
+        id: user.uuid,
+      });
 
       return {
-        token,
+        accessToken,
+        user: {
+          uuid: user.uuid,
+        },
       };
     } catch (error) {
       throw new Error(error);
     }
   }
 
-  async resetPassword(body: ResetPasswordRequestDTO): Promise<any> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+  async resetPassword(body: ResetPasswordRequestDTO, token: string) {
     try {
-      const existedUser = await this.userRepository
-        .createQueryBuilder('u')
-        .where('u.email = :email', { email: body.email })
-        .andWhere('u.status = :status', { status: CommonStatus.ACTIVE })
-        .getRawOne();
+      const payload = this.jwtService.verify(token);
 
-      if (!existedUser) {
-        throw new NotFoundException({
-          message: 'User not found',
-        });
+      if (payload.type !== 'password-reset') {
+        throw new BadRequestException('Invalid token type');
       }
 
-      const isOldPasswordValid = await bcrypt.compare(
-        body.oldPassword,
-        existedUser.password,
-      );
-      if (!isOldPasswordValid) {
-        throw new BadRequestException({
-          message: 'Password is incorrect',
-        });
-      }
-
-      const comparedNewPassword = await bcrypt.compare(
-        body.newPassword,
-        body.confirmPassword,
-      );
-      if (!comparedNewPassword) {
-        throw new BadRequestException({
-          message: 'Password and Confirm Password do not match',
-        });
-      }
-
-      const hashedNewPassword = await bcrypt.hash(body.newPassword, 10);
-      const updatedUser = await this.userRepository
-        .createQueryBuilder('u')
-        .update()
-        .set({
-          password: hashedNewPassword,
+      const resetRecord = await this.resetPasswordRepository
+        .createQueryBuilder('rp')
+        .leftJoinAndSelect('rp.user', 'user')
+        .where('rp.resetToken = :token', { token })
+        .andWhere('rp.status = :status', {
+          status: ResetPasswordStatus.PENDING,
         })
-        .where('u.email = :email', { email: body.email })
+        .andWhere('rp.expiredAt > :now', { now: new Date() })
+        .andWhere('user.uuid = :userId', { userId: payload.sub })
+        .andWhere('user.status = :userStatus', {
+          userStatus: CommonStatus.ACTIVE,
+        })
+        .getOne();
+
+      if (!resetRecord) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      if (body.newPassword !== body.confirmNewPassword) {
+        throw new BadRequestException('Passwords do not match');
+      }
+
+      const hashedPassword = await bcrypt.hash(body.newPassword, 10);
+
+      await this.userRepository
+        .createQueryBuilder()
+        .update(UserEntity)
+        .set({ password: hashedPassword })
+        .where('uuid = :uuid', { uuid: resetRecord.user.uuid })
         .execute();
 
-      await queryRunner.commitTransaction();
-      return updatedUser;
+      await this.resetPasswordRepository
+        .createQueryBuilder()
+        .update(ResetPasswordEntity)
+        .set({ status: ResetPasswordStatus.EXPIRED })
+        .where('uuid = :uuid', { uuid: resetRecord.uuid })
+        .execute();
+
+      try {
+        await this.mailerService.sendEmail({
+          to: resetRecord.user.email,
+          subject: 'Password Changed Successfully',
+          text: 'Your password has been changed successfully.',
+          body: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #28a745;">Password Changed Successfully</h2>
+              <p>Your password has been changed successfully.</p>
+              <p>You can now login with your new password.</p>
+              <p style="color: #dc3545; margin-top: 24px;">
+                <strong>⚠️ If you didn't make this change, please contact support immediately.</strong>
+              </p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+      }
+
+      return {
+        message:
+          'Password reset successfully. You can now login with your new password.',
+      };
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       throw new Error(error);
-    } finally {
-      await queryRunner.release();
     }
   }
 }

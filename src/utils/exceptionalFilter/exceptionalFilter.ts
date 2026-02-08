@@ -37,14 +37,12 @@ export class HttpExceptionalFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : 'Unknown error',
     );
 
-    const responseBody = response.status(httpStatus).json({
+    response.status(httpStatus).json({
       success: false,
       statusCode: httpStatus,
       timestamp: new Date().toISOString(),
       path: request.url,
       message: typeof message === 'string' ? message : (message as any).message,
     });
-
-    httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
   }
 }

@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsDefined,
-  IsEmail,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsArray, IsDefined, IsString } from 'class-validator';
 
 export class ParamsUserRequestDTO {
   @ApiProperty()

@@ -28,6 +28,7 @@ import { Token } from '../decorator/token.decorator';
 import { SignInRequestDTO } from './dto/login.request';
 import { RegisterRequestDTO } from './dto/register.request';
 import { ResetPasswordRequestDTO } from './dto/reset-password.request';
+import { UpdateUserInterface } from './interface/update.interface';
 
 @Controller('user')
 @ApiTags('User')
@@ -35,13 +36,44 @@ import { ResetPasswordRequestDTO } from './dto/reset-password.request';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('/:id')
-  @ApiBearerAuth()
-  async getUser(
-    @Param() param: ParamsUserRequestDTO,
+  @Post('/sign-in')
+  async signIn(@Body() body: SignInRequestDTO): Promise<any> {
+    try {
+      return await this.userService.signIn(body);
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
+
+  @Post('/register')
+  async register(@Body() body: RegisterRequestDTO): Promise<any> {
+    try {
+      return await this.userService.register(body);
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
+
+  @Post('/reset-password')
+  async resetPassword(
+    @Body() body: ResetPasswordRequestDTO,
+    @Token() token: string,
+  ): Promise<any> {
+    try {
+      return await this.userService.resetPassword(body, token);
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
+
+  @Post('/')
+  @UseGuards(AuthGuard)
+  async createUser(
+    @Body() body: UserDataBodyRequestDTO,
+    @Token() token: string,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.getUserById(param);
+      return await this.userService.createUser(body, token);
     } catch (error) {
       throw error;
     }
@@ -60,15 +92,13 @@ export class UserController {
     }
   }
 
-  @Post('/')
-  @UseGuards(AuthGuard)
-  async createUser(
-    @Body() body: UserDataBodyRequestDTO,
-    @Req() req: Request,
-    @Token() token: string,
+  @Get('/:id')
+  @ApiBearerAuth()
+  async getUser(
+    @Param() param: ParamsUserRequestDTO,
   ): Promise<UserRequestBodyResponse> {
     try {
-      return await this.userService.createUser(body, req, token);
+      return await this.userService.getUserById(param);
     } catch (error) {
       throw error;
     }
@@ -79,7 +109,7 @@ export class UserController {
   async updateUser(
     @Param() param: ParamsUserRequestDTO,
     @Body() body: UpdateUserRequestDTO,
-  ): Promise<any> {
+  ): Promise<UpdateUserInterface> {
     try {
       return await this.userService.updateUser(param, body);
     } catch (error) {
@@ -94,39 +124,6 @@ export class UserController {
       return await this.userService.deleteUser(param);
     } catch (error) {
       throw error;
-    }
-  }
-
-  @Post('/sign-in')
-  async signIn(@Body() body: SignInRequestDTO, @Res() res: Response) {
-    try {
-      return await this.userService.signIn(body);
-    } catch (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
-      res.json({ success: false, message: error.message });
-    }
-  }
-
-  @Post('/register')
-  async register(@Body() body: RegisterRequestDTO, @Res() res: Response) {
-    try {
-      return await this.userService.register(body);
-    } catch (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
-      res.json({ success: false, message: error.message });
-    }
-  }
-
-  @Patch('/reset-password')
-  async resetPassword(
-    @Body() body: ResetPasswordRequestDTO,
-    @Res() res: Response,
-  ) {
-    try {
-      return await this.userService.resetPassword(body);
-    } catch (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR);
-      res.json({ success: false, message: error.message });
     }
   }
 }

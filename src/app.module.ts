@@ -25,7 +25,7 @@ import { GoogleModule } from './google/google.module';
         database: configService.get<string>('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
-        logging: true,
+        // logging: true,
       }),
     }),
     ...modules,

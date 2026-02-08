@@ -7,14 +7,22 @@ import { UserEntity } from '../database/user.entity';
 import { MailerAppModule } from '../mailer/mailer.module';
 import { PaginationModule } from '../pagination/pagination.mudule';
 import { jwtConstants } from '../utils/auth/constants';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ResetPasswordEntity } from 'src/database/reset-password.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
-    JwtModule.register({
-      global: true,
-      secret: jwtConstants.secret,
-      signOptions: { expiresIn: '7d' },
+    TypeOrmModule.forFeature([UserEntity, ResetPasswordEntity]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        global: true,
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: '7d',
+        },
+      }),
     }),
     MailerAppModule,
     PaginationModule,
