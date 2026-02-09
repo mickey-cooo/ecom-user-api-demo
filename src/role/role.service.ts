@@ -10,6 +10,7 @@ import {
   ParamsRoleRequestDTO,
 } from './dto/role.request';
 import { CommonStatus } from '../enum/common.status';
+import { CreateBodyRoleRequestDTO } from './dto/create.role.request';
 
 @Injectable()
 export class RoleService {
@@ -56,12 +57,12 @@ export class RoleService {
     }
   }
 
-  async create(body: any): Promise<any> {
+  async create(body: CreateBodyRoleRequestDTO): Promise<any> {
     try {
       const role = await this.roleRepository
         .createQueryBuilder('r')
         .where('r.name = :name', { name: body.name })
-        .getRawOne();
+        .getOne();
 
       if (role) {
         throw new BadRequestException({
@@ -87,7 +88,10 @@ export class RoleService {
     }
   }
 
-  async update(param: ParamsRoleRequestDTO, body: any): Promise<any> {
+  async update(
+    param: ParamsRoleRequestDTO,
+    body: CreateBodyRoleRequestDTO,
+  ): Promise<any> {
     const queryRunner = await this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
@@ -95,7 +99,7 @@ export class RoleService {
       const role = await this.roleRepository
         .createQueryBuilder('r', queryRunner)
         .where('r.uuid = :id', { id: param.id })
-        .getRawOne();
+        .getOne();
 
       if (!role) {
         throw new NotFoundException({
@@ -112,7 +116,10 @@ export class RoleService {
           description: body.description,
           additionalInfo: body.additionalInfo,
           priority: body.priority,
-        });
+        })
+        .where('uuid = :id', { id: param.id })
+        .returning('*')
+        .execute();
 
       await queryRunner.commitTransaction();
       return updatedRole;
@@ -143,10 +150,11 @@ export class RoleService {
       const deletedRole = await this.roleRepository
         .createQueryBuilder('r', queryRunner)
         .update(RoleEntity)
-        .where('r.uuid = :id', { id: param.id })
         .set({
           status: CommonStatus.DELETED,
         })
+        .where('r.uuid = :id', { id: param.id })
+        .returning('*')
         .execute();
 
       await queryRunner.commitTransaction();

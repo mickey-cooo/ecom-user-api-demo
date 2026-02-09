@@ -8,9 +8,9 @@ import { CommonStatus } from '../enum/common.status';
 @Entity('role')
 export class RoleEntity extends TemplateEntity {
   @Column({ type: 'varchar' })
-  name: RoleType;
+  name: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar' })
   description: string;
 
   @Column({ type: 'varchar', nullable: true })
